@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>READSYS_v1.0.0</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <div class="scanlines"></div>
+  <div class="grid-bg"></div>
+
+  <div class="boot-screen" id="bootScreen">
+    <div class="boot-text" id="bootText"></div>
+  </div>
+
+  <div class="dashboard" id="dashboard" style="display:none">
+
+    <header class="topbar">
+      <div class="topbar-left">
+        <span class="sys-id">READSYS_v1.0.0</span>
+        <span class="divider">|</span>
+        <span class="operator">OPERATOR: <strong>HAMDHY</strong></span>
+      </div>
+      <div class="topbar-center">
+        <div class="radar-dot"></div>
+        <span class="status-text" id="sysStatus">ALL SYSTEMS NOMINAL</span>
+      </div>
+      <div class="topbar-right">
+        <span class="clock" id="clock"></span>
+      </div>
+    </header>
+
+    <main class="main-grid">
+
+      <!-- LEFT PANEL -->
+      <aside class="left-panel">
+
+        <div class="panel-block">
+          <div class="panel-label">// TARGET REPOSITORY</div>
+          <div class="input-row">
+            <label class="input-label">REPO URL</label>
+            <input type="text" id="repoUrl" class="sys-input"
+              placeholder="https://github.com/user/repo">
+          </div>
+          <div class="input-hint">supports github.com · https or ssh</div>
+        </div>
+
+        <div class="panel-block">
+          <div class="panel-label">// OPTIONS</div>
+          <div class="toggle-row" id="togglePush" onclick="toggleOption('push')">
+            <div class="toggle-indicator" id="indicatorPush"></div>
+            <div class="toggle-info">
+              <div class="toggle-title">AUTO PUSH TO REPO</div>
+              <div class="toggle-sub">Commit & push README back to remote</div>
+            </div>
+            <div class="toggle-switch" id="switchPush">OFF</div>
+          </div>
+          <div class="toggle-row" id="toggleAi" onclick="toggleOption('ai')">
+            <div class="toggle-indicator active" id="indicatorAi"></div>
+            <div class="toggle-info">
+              <div class="toggle-title">AI DESCRIPTION</div>
+              <div class="toggle-sub">Uses OpenAI if API key is set in .env</div>
+            </div>
+            <div class="toggle-switch on" id="switchAi">ON</div>
+          </div>
+        </div>
+
+        <div class="action-btns">
+          <button class="fire-btn" id="generateBtn">
+            <span class="fire-label">▶ GENERATE README</span>
+            <div class="fire-scan"></div>
+          </button>
+          <button class="stop-btn" id="abortBtn" disabled>
+            <span>■ ABORT</span>
+          </button>
+        </div>
+
+        <div class="panel-block">
+          <div class="panel-label">// MISSION STATS</div>
+          <div class="stats-row">
+            <div class="stat-item">
+              <div class="stat-num" id="statTotal">0</div>
+              <div class="stat-lbl">TOTAL</div>
+            </div>
+            <div class="stat-sep"></div>
+            <div class="stat-item">
+              <div class="stat-num green" id="statSuccess">0</div>
+              <div class="stat-lbl">SUCCESS</div>
+            </div>
+            <div class="stat-sep"></div>
+            <div class="stat-item">
+              <div class="stat-num red" id="statFailed">0</div>
+              <div class="stat-lbl">FAILED</div>
+            </div>
+          </div>
+          <div class="progress-bar-wrap">
+            <div class="progress-bar" id="progressBar" style="width:0%"></div>
+          </div>
+          <div class="progress-label" id="progressLabel">IDLE — AWAITING TARGET</div>
+        </div>
+
+        <div class="panel-block">
+          <div class="panel-label">// DETECTED METADATA</div>
+          <div class="meta-grid" id="metaGrid">
+            <div class="meta-item"><span class="meta-key">REPO</span><span class="meta-val" id="metaRepo">—</span></div>
+            <div class="meta-item"><span class="meta-key">LANG</span><span class="meta-val" id="metaLang">—</span></div>
+            <div class="meta-item"><span class="meta-key">DOCKER</span><span class="meta-val" id="metaDocker">—</span></div>
+            <div class="meta-item"><span class="meta-key">CI/CD</span><span class="meta-val" id="metaCICD">—</span></div>
+          </div>
+        </div>
+
+      </aside>
+
+      <!-- RIGHT PANEL -->
+      <section class="right-panel">
+
+        <div class="tab-bar">
+          <button class="tab active" data-tab="live">LIVE FEED</button>
+          <button class="tab" data-tab="preview">README PREVIEW</button>
+          <button class="tab" data-tab="history">HISTORY</button>
+          <button class="tab" data-tab="errors">ERROR LOG</button>
+          <div class="tab-actions">
+            <button class="action-tab-btn" id="copyBtn" disabled title="Copy README">⎘ COPY</button>
+            <button class="action-tab-btn" id="downloadBtn" disabled title="Download README">↓ DOWNLOAD</button>
+          </div>
+        </div>
+
+        <!-- Live feed -->
+        <div class="tab-content active" id="tab-live">
+          <div class="feed-header">
+            <span>ANALYSIS FEED</span>
+            <span class="blink-dot"></span>
+          </div>
+          <div class="feed" id="liveFeed">
+            <div class="feed-idle">[ AWAITING REPOSITORY TARGET... ]</div>
+          </div>
+        </div>
+
+        <!-- README Preview -->
+        <div class="tab-content" id="tab-preview">
+          <div class="feed-header">
+            <span>GENERATED README.MD</span>
+            <span id="previewRepo" style="color:var(--cyan);font-size:0.6rem;letter-spacing:0.1em"></span>
+          </div>
+          <div class="readme-preview" id="readmePreview">
+            <div class="feed-idle">[ NO README GENERATED YET ]</div>
+          </div>
+        </div>
+
+        <!-- History -->
+        <div class="tab-content" id="tab-history">
+          <div class="feed-header">
+            <span>GENERATION HISTORY</span>
+            <button class="wipe-btn" onclick="wipeHistory('history')">WIPE</button>
+          </div>
+          <div class="feed" id="historyFeed"></div>
+        </div>
+
+        <!-- Errors -->
+        <div class="tab-content" id="tab-errors">
+          <div class="feed-header">
+            <span>ERROR LOG</span>
+            <button class="wipe-btn" onclick="wipeHistory('errors')">WIPE</button>
+          </div>
+          <div class="feed" id="errorsFeed"></div>
+        </div>
+
+      </section>
+
+    </main>
+
+    <footer class="footer">
+      <span>ENGINE: SIMPLE-GIT</span>
+      <span class="divider">|</span>
+      <span>PARSER: NODE.FS</span>
+      <span class="divider">|</span>
+      <span>AI: OPENAI_OPTIONAL</span>
+      <span class="divider">|</span>
+      <span>OUTPUT: README.MD ✔</span>
+    </footer>
+
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    // ── Boot sequence ─────────────────────────────────────────────────────────
+    const bootLines = [
+      'READSYS v1.0.0 INITIALIZING...',
+      'LOADING REPO ANALYZER MODULE... OK',
+      'LOADING README GENERATOR... OK',
+      'CONNECTING GIT ENGINE... OK',
+      'CHECKING OPENAI INTEGRATION... OPTIONAL',
+      'ESTABLISHING SOCKET CONNECTION... OK',
+      'ALL SYSTEMS NOMINAL.',
+      'WELCOME, HAMDHY. READY TO GENERATE.'
+    ];
+    let bi = 0;
+    const bootEl = document.getElementById('bootText');
+    function bootStep() {
+      if (bi < bootLines.length) {
+        bootEl.innerHTML += `<div class="boot-line">> ${bootLines[bi]}</div>`;
+        bi++;
+        setTimeout(bootStep, 220);
+      } else {
+        setTimeout(() => {
+          document.getElementById('bootScreen').style.opacity = '0';
+          setTimeout(() => {
+            document.getElementById('bootScreen').style.display = 'none';
+            document.getElementById('dashboard').style.display = 'flex';
+            document.getElementById('dashboard').style.animation = 'fadeIn 0.4s ease';
+            loadAllHistory();
+          }, 400);
+        }, 500);
+      }
+    }
+    setTimeout(bootStep, 300);
+
+    // ── Clock ─────────────────────────────────────────────────────────────────
+    function tick() {
+      document.getElementById('clock').textContent =
+        new Date().toLocaleTimeString('en-GB', { hour12: false }) + ' UTC';
+    }
+    tick(); setInterval(tick, 1000);
+
+    // ── Tabs ──────────────────────────────────────────────────────────────────
+    document.querySelectorAll('.tab').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+      });
+    });
+
+    // ── Toggle options ────────────────────────────────────────────────────────
+    const options = { push: false, ai: true };
+
+    function toggleOption(key) {
+      options[key] = !options[key];
+      const sw = document.getElementById(`switch${key.charAt(0).toUpperCase()+key.slice(1)}`);
+      const ind = document.getElementById(`indicator${key.charAt(0).toUpperCase()+key.slice(1)}`);
+      sw.textContent = options[key] ? 'ON' : 'OFF';
+      sw.classList.toggle('on', options[key]);
+      ind.classList.toggle('active', options[key]);
+    }
+
+    // ── State ─────────────────────────────────────────────────────────────────
+    let abortController = null;
+    let isRunning = false;
+    let currentReadme = '';
+    let currentRepoName = '';
+
+    // ── GENERATE ──────────────────────────────────────────────────────────────
+    document.getElementById('generateBtn').addEventListener('click', async () => {
+      if (isRunning) return;
+
+      const repoUrl = document.getElementById('repoUrl').value.trim();
+      if (!repoUrl) {
+        addLiveLine('error', 'NO TARGET URL — enter a GitHub repository URL');
+        return;
+      }
+
+      isRunning = true;
+      abortController = new AbortController();
+      currentReadme = '';
+
+      const genBtn   = document.getElementById('generateBtn');
+      const abortBtn = document.getElementById('abortBtn');
+      genBtn.disabled = true;
+      genBtn.querySelector('.fire-label').textContent = '⟳ ANALYZING...';
+      abortBtn.disabled = false;
+      document.getElementById('copyBtn').disabled = true;
+      document.getElementById('downloadBtn').disabled = true;
+
+      setStatus('ANALYZING REPOSITORY...');
+      setProgress(10);
+
+      // Clear live feed
+      const feed = document.getElementById('liveFeed');
+      feed.innerHTML = '';
+
+      addLiveLine('info', `TARGET: ${repoUrl}`);
+
+      // Update stats
+      const total = parseInt(document.getElementById('statTotal').textContent) + 1;
+      document.getElementById('statTotal').textContent = total;
+
+      try {
+        const res = await fetch('/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ repoUrl, pushBack: options.push }),
+          signal: abortController.signal
+        });
+
+        if (!res.ok) throw new Error(await res.text());
+
+        const reader  = res.body.getReader();
+        const decoder = new TextDecoder();
+        setProgress(30);
+
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          if (!value) continue;
+
+          const text  = decoder.decode(value);
+          const lines = text.split('\n').filter(l => l.trim());
+
+          for (const line of lines) {
+            if (line === 'DONE') { setProgress(100); continue; }
+            if (line === 'ERROR') continue;
+
+            // Parse metadata lines
+            if (line.startsWith('REPO: ')) {
+              currentRepoName = line.replace('REPO: ', '').trim();
+              document.getElementById('metaRepo').textContent = currentRepoName;
+            }
+            if (line.startsWith('LANGUAGE: ')) {
+              document.getElementById('metaLang').textContent = line.replace('LANGUAGE: ', '').trim();
+            }
+            if (line.startsWith('DOCKER: ')) {
+              const parts = line.split('|');
+              const docker = parts[0].replace('DOCKER: ', '').trim();
+              const cicd   = parts[1] ? parts[1].replace(' CI/CD: ', '').trim() : '—';
+              document.getElementById('metaDocker').textContent = docker;
+              document.getElementById('metaCICD').textContent = cicd;
+            }
+
+            const type = line.startsWith('❌') || line.startsWith('⚠️') ? 'error'
+                       : line.startsWith('✅') ? 'success'
+                       : 'info';
+            addLiveLine(type, line);
+            setProgress(Math.min(95, parseInt(document.getElementById('progressBar').style.width || '0') + 5));
+          }
+        }
+
+        addLiveLine('success', '✅ README GENERATED SUCCESSFULLY');
+        setStatus('MISSION COMPLETE');
+        setProgress(100);
+
+        const s = parseInt(document.getElementById('statSuccess').textContent) + 1;
+        document.getElementById('statSuccess').textContent = s;
+
+      } catch (err) {
+        if (err.name === 'AbortError') {
+          addLiveLine('error', '■ ABORTED BY OPERATOR');
+          setStatus('ABORTED');
+        } else {
+          addLiveLine('error', `FATAL: ${err.message}`);
+          setStatus('SYSTEM ERROR');
+          const f = parseInt(document.getElementById('statFailed').textContent) + 1;
+          document.getElementById('statFailed').textContent = f;
+          saveHistory('errors', { msg: err.message, repoUrl, time: nowStr() });
+          renderHistory('errors');
+        }
+        setProgress(0);
+      } finally {
+        isRunning = false;
+        genBtn.disabled = false;
+        genBtn.querySelector('.fire-label').textContent = '▶ GENERATE README';
+        abortBtn.disabled = true;
+      }
+    });
+
+    // ── ABORT ─────────────────────────────────────────────────────────────────
+    document.getElementById('abortBtn').addEventListener('click', () => {
+      if (abortController) abortController.abort();
+    });
+
+    // ── Socket — receive README content ───────────────────────────────────────
+    const socket = io();
+
+    socket.on('readme-ready', ({ name, readme }) => {
+      currentReadme    = readme;
+      currentRepoName  = name;
+
+      // Show in preview tab
+      document.getElementById('previewRepo').textContent = name;
+      const pre = document.getElementById('readmePreview');
+      pre.innerHTML = `<pre class="readme-raw">${escHtml(readme)}</pre>`;
+
+      // Enable copy/download
+      document.getElementById('copyBtn').disabled = false;
+      document.getElementById('downloadBtn').disabled = false;
+
+      // Switch to preview tab
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+      document.querySelector('[data-tab="preview"]').classList.add('active');
+      document.getElementById('tab-preview').classList.add('active');
+
+      // Save to history
+      saveHistory('history', { name, repoUrl: document.getElementById('repoUrl').value, time: nowStr(), lines: readme.split('\n').length });
+      renderHistory('history');
+    });
+
+    // Live reload from watcher
+    const devSocket = io('http://localhost:3001');
+    devSocket.on('reload', () => location.reload());
+
+    // ── Copy README ───────────────────────────────────────────────────────────
+    document.getElementById('copyBtn').addEventListener('click', () => {
+      if (!currentReadme) return;
+      navigator.clipboard.writeText(currentReadme).then(() => {
+        const btn = document.getElementById('copyBtn');
+        btn.textContent = '✔ COPIED';
+        setTimeout(() => { btn.textContent = '⎘ COPY'; }, 2000);
+      });
+    });
+
+    // ── Download README ───────────────────────────────────────────────────────
+    document.getElementById('downloadBtn').addEventListener('click', async () => {
+      if (!currentReadme) return;
+      const res = await fetch('/download', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: currentReadme, filename: `${currentRepoName || 'README'}.md` })
+      });
+      const blob = await res.blob();
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      a.href     = url;
+      a.download = `${currentRepoName || 'README'}.md`;
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+
+    // ── Live feed ─────────────────────────────────────────────────────────────
+    function addLiveLine(type, msg) {
+      const feed = document.getElementById('liveFeed');
+      const idle = feed.querySelector('.feed-idle');
+      if (idle) idle.remove();
+      const line = document.createElement('div');
+      line.className = `feed-line feed-${type}`;
+      line.innerHTML = `<span class="feed-ts">${nowStr()}</span><span class="feed-msg">${escHtml(msg)}</span>`;
+      feed.appendChild(line);
+      feed.scrollTop = feed.scrollHeight; // live feed scrolls to bottom
+      while (feed.children.length > 300) feed.removeChild(feed.firstChild);
+    }
+
+    // ── Progress ──────────────────────────────────────────────────────────────
+    function setProgress(pct) {
+      document.getElementById('progressBar').style.width = pct + '%';
+      document.getElementById('progressLabel').textContent =
+        pct === 0 ? 'IDLE — AWAITING TARGET'
+        : pct === 100 ? 'COMPLETE ✔'
+        : `PROCESSING... ${pct}%`;
+    }
+
+    // ── History ───────────────────────────────────────────────────────────────
+    function saveHistory(type, entry) {
+      const key = `readsys_${type}`;
+      let arr = JSON.parse(localStorage.getItem(key) || '[]');
+      arr.unshift(entry);
+      if (arr.length > 200) arr = arr.slice(0, 200);
+      localStorage.setItem(key, JSON.stringify(arr));
+    }
+
+    function loadAllHistory() {
+      renderHistory('history');
+      renderHistory('errors');
+    }
+
+    function renderHistory(type) {
+      const feedIds = { history: 'historyFeed', errors: 'errorsFeed' };
+      const feed = document.getElementById(feedIds[type]);
+      if (!feed) return;
+      const arr = JSON.parse(localStorage.getItem(`readsys_${type}`) || '[]');
+
+      if (arr.length === 0) {
+        feed.innerHTML = `<div class="feed-idle">[ NO ${type.toUpperCase()} ]</div>`;
+        return;
+      }
+
+      feed.innerHTML = arr.map(e => {
+        if (type === 'history') {
+          return `<div class="feed-line feed-success">
+            <span class="feed-ts">${e.time}</span>
+            <span class="feed-msg">✔ ${e.name} — ${e.lines} lines · ${e.repoUrl}</span>
+          </div>`;
+        }
+        return `<div class="feed-line feed-error">
+          <span class="feed-ts">${e.time}</span>
+          <span class="feed-msg">✘ ${e.msg} · ${e.repoUrl}</span>
+        </div>`;
+      }).join('');
+    }
+
+    function wipeHistory(type) {
+      if (!confirm(`WIPE ${type.toUpperCase()}?`)) return;
+      localStorage.removeItem(`readsys_${type}`);
+      renderHistory(type);
+    }
+
+    function setStatus(msg) {
+      document.getElementById('sysStatus').textContent = msg;
+    }
+
+    function nowStr() {
+      return new Date().toLocaleTimeString('en-GB', { hour12: false });
+    }
+
+    function escHtml(str) {
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+    }
+  </script>
+</body>
+</html>
